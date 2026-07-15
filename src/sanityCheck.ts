@@ -7,6 +7,7 @@ import { existsSync, readFileSync } from 'fs'
 import { join } from 'path'
 import {
   actionsLocation,
+  categoriesLocation,
   conditionKeysLocation,
   resourceTypesLocation,
   serviceInfoLocation
@@ -16,6 +17,13 @@ import {
 const services = JSON.parse(readFileSync(join(serviceInfoLocation, 'services.json'), 'utf8'))
 const serviceNames = JSON.parse(
   readFileSync(join(serviceInfoLocation, 'serviceNames.json'), 'utf8')
+)
+const categories = JSON.parse(readFileSync(join(serviceInfoLocation, 'categories.json'), 'utf8'))
+const categoryNames = JSON.parse(
+  readFileSync(join(serviceInfoLocation, 'categoryNames.json'), 'utf8')
+)
+const serviceCategories = JSON.parse(
+  readFileSync(join(serviceInfoLocation, 'serviceCategories.json'), 'utf8')
 )
 
 const tests: (() => boolean)[] = [
@@ -142,6 +150,48 @@ const tests: (() => boolean)[] = [
           console.log(`Service ${service} has invalid JSON in ${fileName}`)
           return false
         }
+      }
+    }
+    return true
+  },
+  () => {
+    const serviceSet = new Set(services)
+    const categorySet = new Set(categories)
+    for (const category of categories) {
+      if (!categoryNames[category]) {
+        console.log(`Category ${category} is missing from categoryNames.json`)
+        return false
+      }
+      const categoryFile = join(categoriesLocation, `${category}.json`)
+      if (!existsSync(categoryFile)) {
+        console.log(`Category ${category} is missing from ${categoryFile}`)
+        return false
+      }
+      const categoryDetails = JSON.parse(readFileSync(categoryFile, 'utf8'))
+      if (categoryDetails.key !== category) {
+        console.log(`Category file ${categoryFile} has mismatched key ${categoryDetails.key}`)
+        return false
+      }
+      if (categoryDetails.name !== categoryNames[category]) {
+        console.log(`Category ${category} has mismatched name`)
+        return false
+      }
+      for (const service of categoryDetails.services) {
+        if (!serviceSet.has(service)) {
+          console.log(`Category ${category} references unknown service ${service}`)
+          return false
+        }
+      }
+    }
+    for (const service of services) {
+      const category = serviceCategories[service]
+      if (!category) {
+        console.log(`Service ${service} is missing from serviceCategories.json`)
+        return false
+      }
+      if (!categorySet.has(category)) {
+        console.log(`Service ${service} references unknown category ${category}`)
+        return false
       }
     }
     return true

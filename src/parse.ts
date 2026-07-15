@@ -1,20 +1,29 @@
 import { load } from 'cheerio'
-import { mkdir, readdir, readFile, writeFile } from 'fs/promises'
+import { mkdir, readdir, readFile, rm, writeFile } from 'fs/promises'
 import { join } from 'path'
 import { parseActions } from './parsing/actions.js'
 import { parseConditionKeys } from './parsing/conditionKeys.js'
 import { parseResourceTypes } from './parsing/resourceTypes.js'
 import { verifyHtmlFileAssumptions } from './parsing/verifyAssumptions.js'
-import { htmlDownloadLocation, jsonDocsLocation } from './util/consts.js'
+import {
+  htmlDownloadLocation,
+  jsonDocsLocation,
+  serviceReferenceDownloadLocation
+} from './util/consts.js'
 import { type ServiceDefinition } from './util/serviceDefinition.js'
+import { type ServiceReference } from './util/serviceReference.js'
 
 async function parseFile(filename: string): Promise<ServiceDefinition> {
   const fileContents = await readFile(join(htmlDownloadLocation, filename), 'utf-8')
-  const serviceName = filename.substring(0, filename.length - 5)
+  const rawServiceName = filename.substring(0, filename.length - 5)
   const doc = load(fileContents)
   const prefix = doc('p:contains("service prefix:")').find('.code').text()
+  const serviceName = rawServiceName.endsWith(` (${prefix})`)
+    ? rawServiceName.substring(0, rawServiceName.length - ` (${prefix})`.length)
+    : rawServiceName
 
-  const actions = parseActions(doc)
+  const serviceReference = await readServiceReference(prefix)
+  const actions = parseActions(doc, serviceReference)
   const resourceTypes = parseResourceTypes(doc)
   const conditionKeys = parseConditionKeys(doc)
 
@@ -24,6 +33,19 @@ async function parseFile(filename: string): Promise<ServiceDefinition> {
     actions,
     resourceTypes,
     conditionKeys
+  }
+}
+
+async function readServiceReference(prefix: string): Promise<ServiceReference | undefined> {
+  try {
+    return JSON.parse(
+      await readFile(
+        join(serviceReferenceDownloadLocation, `${prefix.toLowerCase()}.json`),
+        'utf-8'
+      )
+    ) as ServiceReference
+  } catch {
+    return undefined
   }
 }
 
@@ -48,6 +70,7 @@ async function parseAllFiles() {
 }
 
 async function run() {
+  await rm(jsonDocsLocation, { recursive: true, force: true })
   await mkdir(jsonDocsLocation, { recursive: true })
   await verifyAllFiles()
   await parseAllFiles()

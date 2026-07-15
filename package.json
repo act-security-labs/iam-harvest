@@ -11,6 +11,7 @@
     "format": "npx prettier --write src/",
     "format-check": "npx prettier --check src/",
     "parse": "tsx src/parse.ts",
+    "test": "npx vitest --run",
     "sortServiceDefinitions": "tsx src/sortServiceDefinitions.ts",
     "sanityCheck": "tsx src/sanityCheck.ts"
   },
@@ -36,7 +37,8 @@
   "devDependencies": {
     "@cloud-copilot/prettier-config": "^0.1.1",
     "@types/node": "^22.9.1",
-    "typescript": "^5.6.3"
+    "typescript": "^5.6.3",
+    "vitest": "^4.0.18"
   },
   "prettier": "@cloud-copilot/prettier-config"
 }

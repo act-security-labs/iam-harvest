@@ -1,7 +1,9 @@
 import type { Cheerio, CheerioAPI } from 'cheerio'
 import { Element } from 'domhandler'
 import { type Action, type ActionResourceType, type Scenario } from '../util/serviceDefinition.js'
+import { type ServiceReference } from '../util/serviceReference.js'
 import { type ProblemRow } from './ProblemRow.js'
+import { parseResourceTypes } from './resourceTypes.js'
 
 interface ResourceTypeReference {
   name: string
@@ -11,11 +13,20 @@ interface ResourceTypeReference {
 //[Action, Description, Access Level] --one or many--> Resource Types(required), Condition Keys, Dependent Actions
 // Description may have Scenarios in it.
 
-export function parseActions(doc: CheerioAPI): Action[] {
+export function parseActions(doc: CheerioAPI, serviceReference?: ServiceReference): Action[] {
   const table = doc('th:contains("Actions")').parents('table')
   const actionRows = findActionRows(doc, table)
+  const usesFiveColumnFormat = !table.text().includes('Dependent actions')
+  const resourceTypeConditionKeys = usesFiveColumnFormat ? getResourceTypeConditionKeys(doc) : {}
 
-  return actionRows.map((row) => getActionFromRow(doc, row))
+  return actionRows
+    .map((row) => getActionFromRow(doc, row))
+    .map((action) =>
+      usesFiveColumnFormat
+        ? liftCommonConditionKeysToAction(action, resourceTypeConditionKeys)
+        : action
+    )
+    .map((action) => applyServiceReferenceToAction(action, serviceReference))
 }
 
 function parseName(nameText: string): { name: string; isPermissionOnly?: boolean } {
@@ -24,6 +35,102 @@ function parseName(nameText: string): { name: string; isPermissionOnly?: boolean
   return {
     name: nameText.trim().split(/\s/)[0],
     isPermissionOnly
+  }
+}
+
+function getResourceTypeConditionKeys(doc: CheerioAPI): Record<string, Set<string>> {
+  const resourceTypes = parseResourceTypes(doc) ?? []
+  return resourceTypes.reduce(
+    (acc, resourceType) => {
+      acc[resourceType.key] = new Set(resourceType.conditionKeys ?? [])
+      return acc
+    },
+    {} as Record<string, Set<string>>
+  )
+}
+
+function liftCommonConditionKeysToAction(
+  action: Action,
+  resourceTypeConditionKeys: Record<string, Set<string>>
+): Action {
+  if (action.resourceTypes.length === 0) {
+    return action
+  }
+
+  const conditionKeySets = action.resourceTypes.map(
+    (resourceType) => new Set(resourceType.conditionKeys)
+  )
+  const commonConditionKeys = conditionKeySets.reduce((common, conditionKeys) => {
+    return new Set([...common].filter((key) => conditionKeys.has(key)))
+  })
+  const actionConditionKeys = [...commonConditionKeys].filter((key) =>
+    isLikelyActionLevelConditionKey(key, resourceTypeConditionKeys)
+  )
+
+  return {
+    ...action,
+    conditionKeys: [...new Set([...action.conditionKeys, ...actionConditionKeys])],
+    resourceTypes: action.resourceTypes.map((resourceType) => ({
+      ...resourceType,
+      conditionKeys: resourceType.conditionKeys.filter((key) => !actionConditionKeys.includes(key))
+    }))
+  }
+}
+
+function isLikelyActionLevelConditionKey(
+  conditionKey: string,
+  resourceTypeConditionKeys: Record<string, Set<string>>
+): boolean {
+  if (/^(aws:RequestTag\/|aws:ResourceTag\/|aws:TagKeys$)/.test(conditionKey)) {
+    return false
+  }
+  if (/:(ResourceTag|BucketTag|AccessPointTag)\//.test(conditionKey)) {
+    return false
+  }
+  if (
+    conditionKey.endsWith(':IsLaunchTemplateResource') ||
+    conditionKey.endsWith(':LaunchTemplate')
+  ) {
+    return false
+  }
+  if (conditionKey.endsWith(':Region')) {
+    return true
+  }
+  return !Object.values(resourceTypeConditionKeys).every((keys) => keys.has(conditionKey))
+}
+
+function applyServiceReferenceToAction(
+  action: Action,
+  serviceReference?: ServiceReference
+): Action {
+  if (!serviceReference) {
+    return action
+  }
+
+  const referenceAction = serviceReference.Actions.find(
+    (candidate) => candidate.Name.toLowerCase() === action.name.toLowerCase()
+  )
+  if (!referenceAction) {
+    return action
+  }
+
+  const referenceResources = referenceAction.Resources ?? []
+  // AWS's service reference JSON is the authoritative source for action/resource condition keys and
+  // dependent actions. In that JSON, an omitted condition-key or dependent-action field means no
+  // values are listed for that scope.
+  return {
+    ...action,
+    conditionKeys: referenceAction.ActionConditionKeys ?? [],
+    dependentActions: referenceAction.DependentActions ?? [],
+    resourceTypes: action.resourceTypes.map((resourceType) => {
+      const referenceResource = referenceResources.find(
+        (candidate) => candidate.Name.toLowerCase() === resourceType.name.toLowerCase()
+      )
+      return {
+        ...resourceType,
+        conditionKeys: referenceResource?.ConditionKeys ?? []
+      }
+    })
   }
 }
 
@@ -50,18 +157,24 @@ function getActionFromRow(doc: CheerioAPI, row: Cheerio<Element>): Action {
 
 function parseSingleRowAction(doc: CheerioAPI, row: Cheerio<Element>): Action {
   const columns = row.find('td')
+  const hasDependentActionsColumn = columns.length === 6
+  const accessLevelColumn = hasDependentActionsColumn ? 2 : 4
+  const resourceTypeColumn = hasDependentActionsColumn ? 3 : 2
+  const conditionKeysColumn = hasDependentActionsColumn ? 4 : 3
   const { name, isPermissionOnly } = parseName(doc(columns.get(0)).text())
   const description = doc(columns.get(1)).text().trim()
-  const accessLevel = doc(columns.get(2)).text().trim()
-  const resourceType = parseResourceTypeRef(doc(columns.get(3)).text().trim())
-  const conditionKeys = doc(columns.get(4))
+  const accessLevel = doc(columns.get(accessLevelColumn)).text().trim()
+  const resourceType = parseResourceTypeRef(doc(columns.get(resourceTypeColumn)).text().trim())
+  const conditionKeys = doc(columns.get(conditionKeysColumn))
     .find('a')
     .map((i, el) => doc(el).text().trim())
     .get()
-  const dependentActions = doc(columns.get(5))
-    .find('p')
-    .map((i, el) => doc(el).text().trim())
-    .get()
+  const dependentActions = hasDependentActionsColumn
+    ? doc(columns.get(5))
+        .find('p')
+        .map((i, el) => doc(el).text().trim())
+        .get()
+    : []
 
   return {
     name,
@@ -84,7 +197,9 @@ function parseSimpleMultiRowAction(
   const columns = row.find('td')
   const { name, isPermissionOnly } = parseName(doc(columns.get(0)).text())
   const description = doc(columns.get(1)).text().trim()
-  const accessLevel = doc(columns.get(2)).text().trim()
+  const accessLevel = doc(columns.get(columns.length === 6 ? 2 : 4))
+    .text()
+    .trim()
 
   //Gather up all the rows, these will be the different resource types.
   const allRows = []
@@ -136,7 +251,9 @@ function parseScenarioMultiRowAction(
 
   const theAction = parseSimpleMultiRowAction(doc, initialRow, parseInt(secondColumnRowspan))
 
-  const scenarioRows = allRows.filter((row) => row.find('td').length === 5)
+  const scenarioRows = allRows.filter((row) =>
+    row.find('td').first().text().trim().startsWith('SCENARIO:')
+  )
   theAction.scenarios = scenarioRows.map((row) => parseScenarioRow(doc, row))
 
   return theAction
@@ -145,20 +262,23 @@ function parseScenarioMultiRowAction(
 function parseScenarioRow(doc: CheerioAPI, row: Cheerio<Element>): Scenario {
   const columns = row.find('td')
   const nameCell = doc(columns.get(0)).text().trim()
+  const resourceTypeColumn = columns.length === 5 ? 2 : 1
+  const conditionKeysColumn = columns.length === 5 ? 3 : 2
+  const dependentActionsColumn = columns.length === 5 ? 4 : 3
   //Chop off "SCENARIO:"
   const name = nameCell.substring(10, nameCell.length).trim()
-  const resourceTypes = doc(columns.get(2))
+  const resourceTypes = doc(columns.get(resourceTypeColumn))
     .find('a')
     .map((i, el) => doc(el).text().trim())
     .get()
     .map((s) => parseResourceTypeRef(s))
     .filter((r) => r !== undefined) as ActionResourceType[]
 
-  const conditionKeys = doc(columns.get(3)).text().trim()
+  const conditionKeys = doc(columns.get(conditionKeysColumn)).text().trim()
   if (conditionKeys !== '') {
     throw new Error('Found condition keys where unexpected in scenario row: ' + row.html())
   }
-  const dependentActions = doc(columns.get(4)).text().trim()
+  const dependentActions = doc(columns.get(dependentActionsColumn)).text().trim()
   if (dependentActions !== '') {
     throw new Error('Found dependent actions where unexpected in scenario row: ' + row.html())
   }
@@ -174,7 +294,7 @@ function parseResourceTypeFromRow(
   row: Cheerio<Element>
 ): Partial<ActionResourceType> {
   const columns = row.find('td')
-  const startAt = columns.length === 6 ? 3 : 0
+  const startAt = columns.length === 6 ? 3 : columns.length === 5 ? 2 : 0
 
   //TODO: Add a check for multiple resource types in a single row.
   if (doc(columns.get(startAt)).find('a').length > 1) {
@@ -185,10 +305,13 @@ function parseResourceTypeFromRow(
     .find('a')
     .map((i, el) => doc(el).text().trim())
     .get()
-  const dependentActions = doc(columns.get(startAt + 2))
-    .find('p')
-    .map((i, el) => doc(el).text().trim())
-    .get()
+  const dependentActions =
+    columns.length === 6
+      ? doc(columns.get(startAt + 2))
+          .find('p')
+          .map((i, el) => doc(el).text().trim())
+          .get()
+      : []
 
   return {
     name: resourceTypeRef?.name,
@@ -221,8 +344,8 @@ function findActionRows(doc: CheerioAPI, table: Cheerio<Element>) {
   const actionRows: Cheerio<Element>[] = []
   rows.each((i, el) => {
     const row = doc(el)
-    const hasSixColumns = row.find('td').length === 6
-    if (hasSixColumns) {
+    const isActionStartRow = [5, 6].includes(row.find('td').length)
+    if (isActionStartRow) {
       actionRows.push(row)
     }
   })
@@ -270,29 +393,31 @@ export function verifyRowspanAssumptions(doc: CheerioAPI, table: Cheerio<Element
   rows.each((i, el) => {
     const row = doc(el)
     const hasRowspans = row.find('td[rowspan]').length > 0
-    const hasSixColumns = row.find('td').length === 6
+    const columnCount = row.find('td').length
+    const isActionStartRow = [5, 6].includes(columnCount)
     if (!hasRowspans) {
       return
     }
-    const previousRow = row.prev()
-    const previousRowHasRowspan = previousRow.find('td[rowspan]').length > 0
-    if (previousRowHasRowspan) {
-      errorRows.push({ problemDescription: 'previous row has rowspan', html: row.html()! })
-      return
-    }
 
-    if (hasRowspans && !hasSixColumns) {
-      errorRows.push({ problemDescription: 'does not have six columns', html: row.html()! })
+    if (!isActionStartRow) {
+      errorRows.push({
+        problemDescription: 'does not have action start columns',
+        html: row.html()!
+      })
       return
     }
     const columns = row.find('td')
+    const hasDependentActionsColumn = columnCount === 6
+    const accessLevelColumn = hasDependentActionsColumn ? 2 : 4
+    const resourceTypeColumn = hasDependentActionsColumn ? 3 : 2
+    const conditionKeysColumn = hasDependentActionsColumn ? 4 : 3
     const firstColumnRowspan = doc(columns.get(0)).attr('rowspan')
     const secondColumnRowspan = doc(columns.get(1)).attr('rowspan')
-    const thirdColumnRowspan = doc(columns.get(2)).attr('rowspan')
+    const accessLevelRowspan = doc(columns.get(accessLevelColumn)).attr('rowspan')
 
-    if (!firstColumnRowspan || !secondColumnRowspan || !thirdColumnRowspan) {
+    if (!firstColumnRowspan || !secondColumnRowspan || !accessLevelRowspan) {
       errorRows.push({
-        problemDescription: 'missing rowspan in first three columns',
+        problemDescription: 'missing rowspan in action, description, or access level columns',
         html: row.html()!
       })
       return
@@ -307,21 +432,23 @@ export function verifyRowspanAssumptions(doc: CheerioAPI, table: Cheerio<Element
       return
     }
 
-    if (parseInt(secondColumnRowspan) != parseInt(thirdColumnRowspan)) {
+    if (parseInt(secondColumnRowspan) != parseInt(accessLevelRowspan)) {
       errorRows.push({
-        problemDescription: 'second and third column rowspan should be equal',
+        problemDescription: 'description and access level rowspans should be equal',
         html: row.html()!
       })
       return
     }
 
-    //make sure the last three columns have no rowspan
-    const fourthColumnRowspan = doc(columns.get(3)).attr('rowspan')
-    const fifthColumnRowspan = doc(columns.get(4)).attr('rowspan')
-    const sixthColumnRowspan = doc(columns.get(5)).attr('rowspan')
-    if (fourthColumnRowspan || fifthColumnRowspan || sixthColumnRowspan) {
+    //make sure resource, condition key, and dependent action columns have no rowspan
+    const resourceTypeColumnRowspan = doc(columns.get(resourceTypeColumn)).attr('rowspan')
+    const conditionKeysColumnRowspan = doc(columns.get(conditionKeysColumn)).attr('rowspan')
+    const dependentActionsColumnRowspan = hasDependentActionsColumn
+      ? doc(columns.get(5)).attr('rowspan')
+      : undefined
+    if (resourceTypeColumnRowspan || conditionKeysColumnRowspan || dependentActionsColumnRowspan) {
       errorRows.push({
-        problemDescription: 'found rowspan in last three columns',
+        problemDescription: 'found rowspan in resource, condition key, or dependent action columns',
         html: row.html()!
       })
       return

@@ -24,5 +24,15 @@
     "skipLibCheck": false,
   },
   "include": ["src/**/*"],
-  "exclude": ["tests", "test", "dist", "bin", "**/bin", "**/dist", "node_modules", "cdk.out"],
+  "exclude": [
+    "tests",
+    "test",
+    "dist",
+    "bin",
+    "**/bin",
+    "**/dist",
+    "**/*.test.ts",
+    "node_modules",
+    "cdk.out"
+  ],
 }
