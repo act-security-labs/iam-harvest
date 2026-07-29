@@ -3,9 +3,11 @@ import { mkdir, readFile } from 'fs/promises'
 import { parseCategoryIndex } from './parsing/categories.js'
 import {
   awsIamDocsRoot,
+  awsOrganizationsDocsRoot,
   awsOverviewDocsRoot,
   awsServiceReferenceRoot,
   htmlDownloadLocation,
+  organizationsMarkdownDownloadLocation,
   overviewMarkdownDownloadLocation,
   serviceReferenceDownloadLocation
 } from './util/consts.js'
@@ -100,10 +102,22 @@ async function downloadAwsOverviewCategoryPages() {
   }
 }
 
+/**
+ * Download the AWS Organizations RCP documentation page used to identify RCP-supported services.
+ */
+async function downloadAwsOrganizationsRcpPage() {
+  await mkdir(organizationsMarkdownDownloadLocation, { recursive: true })
+  await downloadUrlToFile(
+    awsOrganizationsDocsRoot + 'orgs_manage_policies_rcps.md',
+    organizationsMarkdownDownloadLocation + '/orgs_manage_policies_rcps.md'
+  )
+}
+
 async function run() {
   await downloadIamServiceAuthorizationPages()
   await downloadServiceReferenceJsonFiles()
   await downloadAwsOverviewCategoryPages()
+  await downloadAwsOrganizationsRcpPage()
 }
 
 run()

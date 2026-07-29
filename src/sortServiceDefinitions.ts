@@ -7,11 +7,13 @@ import {
   parseCategoryIndex,
   parseCategoryServiceTopics
 } from './parsing/categories.js'
+import { parseRcpSupportedServices } from './parsing/rcpSupportedServices.js'
 import {
   actionsLocation,
   categoriesLocation,
   conditionKeysLocation,
   jsonDocsLocation,
+  organizationsMarkdownDownloadLocation,
   overviewMarkdownDownloadLocation,
   resourceTypesLocation,
   serviceInfoLocation
@@ -217,6 +219,29 @@ function sortRecord<T>(record: Record<string, T>): Record<string, T> {
     )
 }
 
+/**
+ * Read and validate AWS Organizations RCP-supported service prefixes.
+ *
+ * @param infoByService generated IAM service information keyed by IAM service prefix
+ * @returns sorted IAM service prefixes that support RCPs
+ */
+async function getRcpSupportedServices(infoByService: InfoByService): Promise<string[]> {
+  const markdown = await readFile(
+    join(organizationsMarkdownDownloadLocation, 'orgs_manage_policies_rcps.md'),
+    'utf8'
+  )
+  const rcpSupportedServices = parseRcpSupportedServices(markdown)
+  const unknownServices = rcpSupportedServices.filter((service) => !infoByService[service])
+
+  if (unknownServices.length > 0) {
+    throw new Error(
+      `RCP supported services reference unknown IAM services: ${unknownServices.join(', ')}`
+    )
+  }
+
+  return rcpSupportedServices
+}
+
 function addServiceToCategory(
   service: string,
   category: string,
@@ -254,6 +279,7 @@ async function run() {
 
   const [infoByService, unassociatedConditionKeys, conditionPatterns] = getInformationByService()
   const { categories, serviceCategories } = await getCategoryInformation(infoByService)
+  const rcpSupportedServices = await getRcpSupportedServices(infoByService)
   const serviceKeys = Object.keys(infoByService).sort()
   const serviceNames = serviceKeys.reduce(
     (acc, key) => {
@@ -318,6 +344,11 @@ async function run() {
   await writeFile(
     join(serviceInfoLocation, 'conditionPatterns.json'),
     JSON.stringify(conditionPatterns, null, 2)
+  )
+
+  await writeFile(
+    join(serviceInfoLocation, 'rcpSupportedServices.json'),
+    JSON.stringify(rcpSupportedServices, null, 2)
   )
 }
 
