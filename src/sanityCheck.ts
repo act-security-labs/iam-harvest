@@ -25,6 +25,9 @@ const categoryNames = JSON.parse(
 const serviceCategories = JSON.parse(
   readFileSync(join(serviceInfoLocation, 'serviceCategories.json'), 'utf8')
 )
+const rcpSupportedServices = JSON.parse(
+  readFileSync(join(serviceInfoLocation, 'rcpSupportedServices.json'), 'utf8')
+)
 
 const tests: (() => boolean)[] = [
   () => {
@@ -191,6 +194,22 @@ const tests: (() => boolean)[] = [
       }
       if (!categorySet.has(category)) {
         console.log(`Service ${service} references unknown category ${category}`)
+        return false
+      }
+    }
+    return true
+  },
+  () => {
+    const serviceSet = new Set(services)
+    if (rcpSupportedServices.length < 20) {
+      console.log(
+        `Only found ${rcpSupportedServices.length} RCP supported services, expected at least 20`
+      )
+      return false
+    }
+    for (const service of rcpSupportedServices) {
+      if (!serviceSet.has(service)) {
+        console.log(`RCP supported service ${service} is missing from services.json`)
         return false
       }
     }
