@@ -50,6 +50,20 @@ RCPs apply to actions for the following AWS services:
     expect(result).toEqual(['polly'])
   })
 
+  it('parses AWS prefix labels from the supported services section', () => {
+    //Given an AWS Organizations RCP markdown snippet using prefix labels
+    const markdown = `RCPs apply to actions for the following AWS services:
++ [Amazon CloudFront](https://docs.aws.amazon.com/cloudfront) \`(prefix:cloudfront)\`
++ [Amazon CloudWatch Logs](https://docs.aws.amazon.com/cloudwatch) \`(prefix:logs)\`
+`
+
+    //When the RCP supported services are parsed
+    const result = parseRcpSupportedServices(markdown)
+
+    //Then IAM service prefixes are parsed from the prefix labels
+    expect(result).toEqual(['cloudfront', 'logs'])
+  })
+
   it('de-duplicates duplicate supported service prefixes', () => {
     //Given duplicate service prefixes in the supported services list
     const markdown = `RCPs apply to actions for the following AWS services:
@@ -85,7 +99,7 @@ RCPs apply to actions for the following AWS services:
     const parse = () => parseRcpSupportedServices(markdown)
 
     //Then parsing fails loudly instead of guessing from the service name
-    expect(parse).toThrow('RCP supported service list item is missing a bracketed service prefix')
+    expect(parse).toThrow('RCP supported service list item is missing a supported service prefix')
   })
 
   it('throws when a supported service list item is missing a bracketed prefix', () => {
@@ -98,7 +112,7 @@ RCPs apply to actions for the following AWS services:
     const parse = () => parseRcpSupportedServices(markdown)
 
     //Then parsing fails loudly instead of guessing from the service name
-    expect(parse).toThrow('RCP supported service list item is missing a bracketed service prefix')
+    expect(parse).toThrow('RCP supported service list item is missing a supported service prefix')
   })
 
   it('throws when no supported service prefixes are found', () => {

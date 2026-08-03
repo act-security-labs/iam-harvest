@@ -26,13 +26,13 @@ export function parseRcpSupportedServices(markdown: string): string[] {
     }
 
     sawListItem = true
-    const prefixMatch = line.match(/`\[([a-z0-9-]+)]`/)
+    const prefixMatch = line.match(/`(?:\[([a-z0-9-]+)]|\(prefix:([a-z0-9-]+)\))`/)
     if (!prefixMatch) {
       throw new Error(
-        `RCP supported service list item is missing a bracketed service prefix: ${line}`
+        `RCP supported service list item is missing a supported service prefix: ${line}`
       )
     }
-    prefixes.add(prefixMatch[1])
+    prefixes.add(prefixMatch[1] ?? prefixMatch[2])
   }
 
   if (!sawListItem || prefixes.size === 0) {
