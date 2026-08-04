@@ -128,6 +128,7 @@ export const serviceCategoryOverrides: Record<string, string> = {
   'bcm-recommended-actions': 'cloud-financial-management',
   'bedrock-agentcore': 'machine-learning-and-ai',
   'bedrock-mantle': 'machine-learning-and-ai',
+  'bedrock-websearch': 'machine-learning-and-ai',
   billing: 'cloud-financial-management',
   bugbust: 'developer-tools',
   cases: 'business-applications',
