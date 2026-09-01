@@ -1,5 +1,5 @@
 {
-  "name": "@cloud-copilot/iam-harvest",
+  "name": "@actsecurity/iam-harvest",
   "version": "0.1.1",
   "description": "Harvest data about IAM and publish to packages",
   "main": "dist/index.js",
@@ -17,7 +17,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/cloud-copilot/iam-harvest.git"
+    "url": "git+https://github.com/act-security-labs/iam-harvest.git"
   },
   "keywords": [
     "AWS",
@@ -26,19 +26,19 @@
   "author": "David Kerber <dave@cloudcopilot.io>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/cloud-copilot/iam-harvest/issues"
+    "url": "https://github.com/act-security-labs/iam-harvest/issues"
   },
-  "homepage": "https://github.com/cloud-copilot/iam-harvest#readme",
+  "homepage": "https://github.com/act-security-labs/iam-harvest#readme",
   "dependencies": {
     "cheerio": "^1.0.0",
     "domhandler": "^5.0.3",
     "tsx": "^4.19.2"
   },
   "devDependencies": {
-    "@cloud-copilot/prettier-config": "^0.1.1",
+    "@actsecurity/prettier-config": "^0.1.1",
     "@types/node": "^22.9.1",
     "typescript": "^5.6.3",
     "vitest": "^4.0.18"
   },
-  "prettier": "@cloud-copilot/prettier-config"
+  "prettier": "@actsecurity/prettier-config"
 }
