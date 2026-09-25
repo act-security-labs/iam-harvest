@@ -220,6 +220,7 @@ export const serviceCategoryOverrides: Record<string, string> = {
   mpa: 'security-identity-and-compliance',
   'neptune-graph': 'analytics',
   'network-security-director': 'security-identity-and-compliance',
+  'network-security-manager': 'security-identity-and-compliance',
   networkflowmonitor: 'networking-and-content-delivery',
   networkmanager: 'networking-and-content-delivery',
   'networkmanager-chat': 'networking-and-content-delivery',

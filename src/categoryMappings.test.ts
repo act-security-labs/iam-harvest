@@ -4,7 +4,11 @@ import { serviceCategoryOverrides } from './categoryMappings.js'
 describe('serviceCategoryOverrides', () => {
   it('maps AWS service prefixes that are not listed in AWS Overview topics', () => {
     //Given new IAM service prefixes discovered by Service Authorization Reference
-    const servicesMissingFromAwsOverview = ['account-access', 'agent-registry']
+    const servicesMissingFromAwsOverview = [
+      'account-access',
+      'agent-registry',
+      'network-security-manager'
+    ]
 
     //When the category overrides are checked
     const categoriesByService = servicesMissingFromAwsOverview.map((service) => ({
@@ -15,7 +19,8 @@ describe('serviceCategoryOverrides', () => {
     //Then each service has an explicit category assignment
     expect(categoriesByService).toEqual([
       { service: 'account-access', category: 'security-identity-and-compliance' },
-      { service: 'agent-registry', category: 'machine-learning-and-ai' }
+      { service: 'agent-registry', category: 'machine-learning-and-ai' },
+      { service: 'network-security-manager', category: 'security-identity-and-compliance' }
     ])
   })
 })
