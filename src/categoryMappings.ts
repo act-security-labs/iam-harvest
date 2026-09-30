@@ -296,6 +296,7 @@ export const serviceCategoryOverrides: Record<string, string> = {
   ssmmessages: 'management-and-governance',
   'sso-directory': 'security-identity-and-compliance',
   'sso-oauth': 'security-identity-and-compliance',
+  startups: 'management-and-governance',
   sts: 'security-identity-and-compliance',
   support: 'management-and-governance',
   supportauthz: 'management-and-governance',

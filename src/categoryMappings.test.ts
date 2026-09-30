@@ -7,7 +7,8 @@ describe('serviceCategoryOverrides', () => {
     const servicesMissingFromAwsOverview = [
       'account-access',
       'agent-registry',
-      'network-security-manager'
+      'network-security-manager',
+      'startups'
     ]
 
     //When the category overrides are checked
@@ -20,7 +21,8 @@ describe('serviceCategoryOverrides', () => {
     expect(categoriesByService).toEqual([
       { service: 'account-access', category: 'security-identity-and-compliance' },
       { service: 'agent-registry', category: 'machine-learning-and-ai' },
-      { service: 'network-security-manager', category: 'security-identity-and-compliance' }
+      { service: 'network-security-manager', category: 'security-identity-and-compliance' },
+      { service: 'startups', category: 'management-and-governance' }
     ])
   })
 })
