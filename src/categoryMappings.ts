@@ -170,6 +170,7 @@ export const serviceCategoryOverrides: Record<string, string> = {
   'elemental-inference': 'media',
   'elemental-support-cases': 'business-applications',
   'elemental-support-content': 'media',
+  'end-user-messaging': 'business-applications',
   eventsbilltoaws: 'cloud-financial-management',
   evs: 'compute',
   'finops-agent': 'cloud-financial-management',
