@@ -7,6 +7,7 @@ import {
   parseCategoryIndex,
   parseCategoryServiceTopics
 } from './parsing/categories.js'
+import { getConditionKeyPattern, getConditionKeyVariants } from './parsing/conditionKeyPatterns.js'
 import { parseRcpSupportedServices } from './parsing/rcpSupportedServices.js'
 import {
   actionsLocation,
@@ -77,8 +78,9 @@ function getInformationByService(): [InfoByService, UnassociatedConditionKeys, C
         resourceType
     }
     for (const conditionKey of fileContents.conditionKeys || []) {
-      infoByService[fileContents.prefix].conditionKeys[conditionKey.key.toLowerCase()] =
-        conditionKey
+      for (const variant of getConditionKeyVariants(conditionKey)) {
+        infoByService[fileContents.prefix].conditionKeys[variant.key.toLowerCase()] = variant
+      }
       const conditionPrefix = conditionKey.key.split(':')[0]
       if (
         conditionPrefix !== 'aws' &&
@@ -93,18 +95,13 @@ function getInformationByService(): [InfoByService, UnassociatedConditionKeys, C
         }
       }
 
-      const hasDollarVar = conditionKey.key.includes('${')
-      const hasAngleVar = conditionKey.key.includes('<')
-      if ((hasDollarVar || hasAngleVar) && !conditionKey.key.startsWith('aws:')) {
-        const parts = conditionKey.key.split('$')
-        if (parts.length > 2) {
-          throw new Error(`Unexpected format for key: ${conditionKey.key}`)
+      const conditionKeyPattern = getConditionKeyPattern(conditionKey.key)
+      if (conditionKeyPattern) {
+        if (!conditionPatterns[conditionKeyPattern.servicePrefix]) {
+          conditionPatterns[conditionKeyPattern.servicePrefix] = {}
         }
-        if (!conditionPatterns[conditionPrefix]) {
-          conditionPatterns[conditionPrefix] = {}
-        }
-        const pattern = conditionKey.key.replace(/\$\{.*\}/, '.+?').replace(/<.*>/, '.+?')
-        conditionPatterns[conditionPrefix][pattern] = conditionKey.key
+        conditionPatterns[conditionKeyPattern.servicePrefix][conditionKeyPattern.pattern] =
+          conditionKeyPattern.template
       }
     }
   }
