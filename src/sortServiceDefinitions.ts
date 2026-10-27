@@ -1,6 +1,7 @@
 import { readdirSync } from 'fs'
 import { mkdir, readFile, rm, writeFile } from 'fs/promises'
 import { join } from 'path'
+import { addBlockAnonMetadata } from './blockAnonActions.js'
 import { serviceCategoryOverrides, topicAliases, topicSkips } from './categoryMappings.js'
 import {
   normalizeServiceCategoryTopic,
@@ -71,7 +72,10 @@ function getInformationByService(): [InfoByService, UnassociatedConditionKeys, C
     }
 
     for (const action of fileContents.actions || []) {
-      infoByService[fileContents.prefix].actions[action.name.toLowerCase()] = action
+      infoByService[fileContents.prefix].actions[action.name.toLowerCase()] = addBlockAnonMetadata(
+        servicePrefix,
+        action
+      )
     }
     for (const resourceType of fileContents.resourceTypes || []) {
       infoByService[fileContents.prefix].resourceTypes[resourceType.key.toLowerCase()] =
