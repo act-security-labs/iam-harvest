@@ -2,6 +2,15 @@ import { describe, expect, it } from 'vitest'
 import { serviceCategoryOverrides } from './categoryMappings.js'
 
 describe('serviceCategoryOverrides', () => {
+  it('does not map the retired CodeStar service while retaining its distinct services', () => {
+    //Given the current IAM service prefixes no longer include codestar
+    //When checking the related category overrides
+    //Then only the distinct CodeStar services remain mapped
+    expect(serviceCategoryOverrides).not.toHaveProperty('codestar')
+    expect(serviceCategoryOverrides['codestar-connections']).toBe('developer-tools')
+    expect(serviceCategoryOverrides['codestar-notifications']).toBe('management-and-governance')
+  })
+
   it('maps AWS service prefixes that are not listed in AWS Overview topics', () => {
     //Given new IAM service prefixes discovered by Service Authorization Reference
     const servicesMissingFromAwsOverview = [

@@ -144,7 +144,6 @@ export const serviceCategoryOverrides: Record<string, string> = {
   'codeguru-profiler': 'developer-tools',
   'codeguru-reviewer': 'developer-tools',
   'codeguru-security': 'security-identity-and-compliance',
-  codestar: 'developer-tools',
   'codestar-connections': 'developer-tools',
   'codestar-notifications': 'management-and-governance',
   codewhisperer: 'machine-learning-and-ai',
