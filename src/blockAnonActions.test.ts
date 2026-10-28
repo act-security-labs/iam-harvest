@@ -50,6 +50,21 @@ describe('actionBlocksAnonymousAccess', () => {
 })
 
 describe('addBlockAnonMetadata', () => {
+  it.each(['ConfirmSubscription', 'Unsubscribe'])(
+    'does not categorically block anonymous access to sns:%s',
+    (name) => {
+      //Given an SNS action with a verified unsigned subscription flow
+      const action = { name, description: 'SNS subscription action' }
+
+      //When sparse anonymous-access metadata is added
+      const result = addBlockAnonMetadata('sns', action)
+
+      //Then the action has no categorical anonymous-blocking marker
+      expect(result).toEqual(action)
+      expect(Object.hasOwn(result, 'blockAnon')).toBe(false)
+    }
+  )
+
   it('adds blockAnon only to actions that block anonymous access', () => {
     //Given a marked IAM action definition
     const markedAction = { name: 'GetFederationToken', description: 'Gets a federation token' }
