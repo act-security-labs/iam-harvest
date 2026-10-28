@@ -122,8 +122,8 @@ const blockAnonActions = new Set([
   'secretsmanager:updatesecret',
   'secretsmanager:updatesecretversionstage',
   'secretsmanager:validateresourcepolicy',
+  // ConfirmSubscription and Unsubscribe permit unsigned token/subscription flows.
   'sns:addpermission',
-  'sns:confirmsubscription',
   'sns:createtopic',
   'sns:deletetopic',
   'sns:getdataprotectionpolicy',
@@ -139,7 +139,6 @@ const blockAnonActions = new Set([
   'sns:settopicattributes',
   'sns:subscribe',
   'sns:tagresource',
-  'sns:unsubscribe',
   'sns:untagresource',
   'sts:assumerole',
   'sts:getfederationtoken'
