@@ -10,6 +10,7 @@ import {
 } from './parsing/categories.js'
 import { getConditionKeyPattern, getConditionKeyVariants } from './parsing/conditionKeyPatterns.js'
 import { parseRcpSupportedServices } from './parsing/rcpSupportedServices.js'
+import { validateRcpServices } from './parsing/validateRcpServices.js'
 import {
   actionsLocation,
   categoriesLocation,
@@ -231,16 +232,7 @@ async function getRcpSupportedServices(infoByService: InfoByService): Promise<st
     join(organizationsMarkdownDownloadLocation, 'orgs_manage_policies_rcps.md'),
     'utf8'
   )
-  const rcpSupportedServices = parseRcpSupportedServices(markdown)
-  const unknownServices = rcpSupportedServices.filter((service) => !infoByService[service])
-
-  if (unknownServices.length > 0) {
-    throw new Error(
-      `RCP supported services reference unknown IAM services: ${unknownServices.join(', ')}`
-    )
-  }
-
-  return rcpSupportedServices
+  return validateRcpServices(parseRcpSupportedServices(markdown), Object.keys(infoByService))
 }
 
 function addServiceToCategory(
