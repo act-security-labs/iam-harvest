@@ -89,6 +89,7 @@ export const topicSkips = new Set<string>([
  */
 export const serviceCategoryOverrides: Record<string, string> = {
   a4b: 'business-applications',
+  abuse: 'security-identity-and-compliance',
   'access-analyzer': 'security-identity-and-compliance',
   account: 'management-and-governance',
   'account-access': 'security-identity-and-compliance',
@@ -128,6 +129,7 @@ export const serviceCategoryOverrides: Record<string, string> = {
   'backup-storage': 'storage',
   'bcm-dashboards': 'cloud-financial-management',
   'bcm-data-exports': 'cloud-financial-management',
+  'bcm-data-hub': 'cloud-financial-management',
   'bcm-pricing-calculator': 'cloud-financial-management',
   'bcm-recommended-actions': 'cloud-financial-management',
   'bedrock-agentcore': 'machine-learning-and-ai',

@@ -15,6 +15,8 @@ describe('serviceCategoryOverrides', () => {
     //Given new IAM service prefixes discovered by Service Authorization Reference
     const servicesMissingFromAwsOverview = [
       'account-access',
+      'abuse',
+      'bcm-data-hub',
       'apiportal',
       'osm',
       'agent-registry',
@@ -34,6 +36,8 @@ describe('serviceCategoryOverrides', () => {
     //Then each service has an explicit category assignment
     expect(categoriesByService).toEqual([
       { service: 'account-access', category: 'security-identity-and-compliance' },
+      { service: 'abuse', category: 'security-identity-and-compliance' },
+      { service: 'bcm-data-hub', category: 'cloud-financial-management' },
       { service: 'apiportal', category: 'networking-and-content-delivery' },
       { service: 'osm', category: 'analytics' },
       { service: 'agent-registry', category: 'machine-learning-and-ai' },
