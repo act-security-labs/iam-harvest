@@ -98,6 +98,7 @@ export const serviceCategoryOverrides: Record<string, string> = {
   'action-recommendations': 'management-and-governance',
   activate: 'compute',
   'agentaccess-mcp': 'end-user-computing',
+  'agent-discovery': 'machine-learning-and-ai',
   'agent-registry': 'machine-learning-and-ai',
   aidevops: 'machine-learning-and-ai',
   aiops: 'machine-learning-and-ai',
@@ -105,6 +106,7 @@ export const serviceCategoryOverrides: Record<string, string> = {
   amplifyuibuilder: 'front-end-web-and-mobile',
   apigateway: 'networking-and-content-delivery',
   apiportal: 'networking-and-content-delivery',
+  apex: 'security-identity-and-compliance',
   'app-integrations': 'application-integration',
   appconfig: 'management-and-governance',
   'application-autoscaling': 'management-and-governance',
@@ -329,5 +331,6 @@ export const serviceCategoryOverrides: Record<string, string> = {
   wisdom: 'business-applications',
   worklink: 'end-user-computing',
   workmailmessageflow: 'business-applications',
+  'workload-telemetry': 'security-identity-and-compliance',
   'workspaces-instances': 'end-user-computing'
 }
