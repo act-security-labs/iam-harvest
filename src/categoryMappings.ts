@@ -103,6 +103,7 @@ export const serviceCategoryOverrides: Record<string, string> = {
   aidevops: 'machine-learning-and-ai',
   aiops: 'machine-learning-and-ai',
   amplifybackend: 'front-end-web-and-mobile',
+  amplifygen3: 'front-end-web-and-mobile',
   amplifyuibuilder: 'front-end-web-and-mobile',
   apigateway: 'networking-and-content-delivery',
   apiportal: 'networking-and-content-delivery',
